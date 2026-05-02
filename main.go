@@ -1,6 +1,6 @@
 // elclassico — generates index.html from menu.csv
 //
-// CSV columns: Section, Menu item, Price, Sort order
+// CSV columns: Section, Menu item, Price, Sort order, Available
 //
 // Usage:
 //   elclassico [--csv menu.csv] [--out index.html]
@@ -70,6 +70,7 @@ func loadCSV(path string) ([]Section, error) {
 		"menu item":  -1,
 		"price":      -1,
 		"sort order": -1,
+		"available":  -1,
 	}
 	for i, h := range header {
 		key := strings.ToLower(strings.TrimSpace(h))
@@ -87,11 +88,13 @@ func loadCSV(path string) ([]Section, error) {
 	mi := colIdx["menu item"]
 	pi := colIdx["price"]
 	si := colIdx["sort order"]
+	ai := colIdx["available"]
 
 	type rawItem struct {
 		name      string
 		price     string
 		sortOrder float64 // NaN = no order given
+		available bool
 		rowNum    int
 	}
 
@@ -146,10 +149,17 @@ func loadCSV(path string) ([]Section, error) {
 			}
 		}
 
+		// Available: "t" or "T" means available; empty or "f"/"F" means not available
+		avail := strings.ToLower(get(ai)) == "t"
+		if !avail {
+			continue
+		}
+
 		sectionItems[id] = append(sectionItems[id], rawItem{
 			name:      itemName,
 			price:     get(pi),
 			sortOrder: sortVal,
+			available: true,
 			rowNum:    rowNum,
 		})
 	}
@@ -365,6 +375,7 @@ CSV FORMAT
     Price      — price string          e.g. "129/229" or "149"
     Sort order — optional number; items without a sort order appear
                  after sorted items, in their original CSV row order
+    Available  — T/t = show on menu; F/f or empty = hide from menu
 
 EXAMPLES
   elclassico
