@@ -5,12 +5,30 @@
       "name": "Biryani",
       "page": 1,
       "items": [
-        { "name": "Chicken Dum Biryani",      "price": "129/229" },
-        { "name": "Mutton Dum Biryani",       "price": "170/300" },
-        { "name": "Egg Biryani",              "price": "110/200" },
-        { "name": "Paneer Biryani",           "price": "129/229" },
-        { "name": "Special Chicken Biryani",  "price": "159/299" },
-        { "name": "Chicken Hyderabadi Biryani","price": "319"    }
+        {
+          "name": "Chicken Dum Biryani",
+          "price": "129/229"
+        },
+        {
+          "name": "Mutton Dum Biryani",
+          "price": "180/300"
+        },
+        {
+          "name": "Egg Biryani",
+          "price": "110/200"
+        },
+        {
+          "name": "Paneer Biryani",
+          "price": "129/229"
+        },
+        {
+          "name": "Special Chicken Biryani",
+          "price": "159/299"
+        },
+        {
+          "name": "Chicken Hyderabadi Biryani",
+          "price": "319"
+        }
       ]
     },
     {
@@ -18,11 +36,26 @@
       "name": "Fried Rice",
       "page": 1,
       "items": [
-        { "name": "Chicken Fried Rice", "price": "159" },
-        { "name": "Egg Fried Rice",     "price": "129" },
-        { "name": "Veg Fried Rice",     "price": "119" },
-        { "name": "Paneer Fried Rice",  "price": "159" },
-        { "name": "Mixed Fried Rice",   "price": "229" }
+        {
+          "name": "Chicken Fried Rice",
+          "price": "159"
+        },
+        {
+          "name": "Egg Fried Rice",
+          "price": "129"
+        },
+        {
+          "name": "Veg Fried Rice",
+          "price": "119"
+        },
+        {
+          "name": "Paneer Fried Rice",
+          "price": "159"
+        },
+        {
+          "name": "Mixed Fried Rice",
+          "price": "229"
+        }
       ]
     },
     {
@@ -30,18 +63,54 @@
       "name": "Chinese",
       "page": 1,
       "items": [
-        { "name": "Veg Noodles",           "price": "119" },
-        { "name": "Chicken Noodles",       "price": "159" },
-        { "name": "Chicken Hakka Noodles", "price": "139" },
-        { "name": "Egg Noodles",           "price": "129" },
-        { "name": "Mixed Noodles",         "price": "169" },
-        { "name": "Chilli Chicken",        "price": "160" },
-        { "name": "Chicken Dry Fry",       "price": "169" },
-        { "name": "Chicken Lollipop",      "price": "140" },
-        { "name": "Chilli Baby Corn Dry",  "price": "219" },
-        { "name": "Crispy Baby Corn",      "price": "209" },
-        { "name": "Chicken Manchurian",    "price": "150" },
-        { "name": "Chicken 65",            "price": "169" }
+        {
+          "name": "Veg Noodles",
+          "price": "119"
+        },
+        {
+          "name": "Chicken Noodles",
+          "price": "159"
+        },
+        {
+          "name": "Chicken Hakka Noodles",
+          "price": "139"
+        },
+        {
+          "name": "Egg Noodles",
+          "price": "129"
+        },
+        {
+          "name": "Mixed Noodles",
+          "price": "169"
+        },
+        {
+          "name": "Chilli Chicken",
+          "price": "160"
+        },
+        {
+          "name": "Chicken Dry Fry",
+          "price": "169"
+        },
+        {
+          "name": "Chicken Lollipop",
+          "price": "140"
+        },
+        {
+          "name": "Chilli Baby Corn Dry",
+          "price": "219"
+        },
+        {
+          "name": "Crispy Baby Corn",
+          "price": "209"
+        },
+        {
+          "name": "Chicken Manchurian",
+          "price": "150"
+        },
+        {
+          "name": "Chicken 65",
+          "price": "169"
+        }
       ]
     },
     {
@@ -49,13 +118,34 @@
       "name": "Beverages",
       "page": 1,
       "items": [
-        { "name": "Tea (Red)",           "price": "10" },
-        { "name": "Tea (Milk)",          "price": "20" },
-        { "name": "Coffee",              "price": "30" },
-        { "name": "Soft Drink",          "price": "30" },
-        { "name": "Banana Shake",        "price": "60" },
-        { "name": "Lemon Juice",         "price": "50" },
-        { "name": "Fruit Shake (Seasonal)","price": "99" }
+        {
+          "name": "Tea (Red)",
+          "price": "10"
+        },
+        {
+          "name": "Tea (Milk)",
+          "price": "20"
+        },
+        {
+          "name": "Coffee",
+          "price": "30"
+        },
+        {
+          "name": "Soft Drink",
+          "price": "30"
+        },
+        {
+          "name": "Banana Shake",
+          "price": "60"
+        },
+        {
+          "name": "Lemon Juice",
+          "price": "50"
+        },
+        {
+          "name": "Fruit Shake (Seasonal)",
+          "price": "99"
+        }
       ]
     },
     {
@@ -63,27 +153,90 @@
       "name": "Indian",
       "page": 2,
       "items": [
-        { "name": "Paratha Sabji & Chutney",  "price": "40"  },
-        { "name": "Tawa Roti",                "price": "15"  },
-        { "name": "Butter Roti",              "price": "20"  },
-        { "name": "Plain Rice",               "price": "59"  },
-        { "name": "Jeera Rice",               "price": "69"  },
-        { "name": "Ghee Rice",                "price": "79"  },
-        { "name": "Basmati Rice",             "price": "79"  },
-        { "name": "Dum Aloo",                 "price": "99"  },
-        { "name": "Mixed Vegetables",         "price": "149" },
-        { "name": "Matar Paneer",             "price": "279" },
-        { "name": "Paneer Masala",            "price": "180" },
-        { "name": "Paneer Butter Masala",     "price": "209" },
-        { "name": "Shahi Paneer",             "price": "249" },
-        { "name": "Kadhai Paneer",            "price": "249" },
-        { "name": "Mushroom Matar",           "price": "279" },
-        { "name": "Mushroom Butter Masala",   "price": "259" },
-        { "name": "Butter Chicken Masala",    "price": "250" },
-        { "name": "Dal Fry",                  "price": "60"  },
-        { "name": "Dal Tadka",                "price": "80"  },
-        { "name": "Butter Dal",               "price": "90"  },
-        { "name": "Special Mixed Veg",        "price": "180" }
+        {
+          "name": "Paratha Sabji \u0026 Chutney",
+          "price": "40"
+        },
+        {
+          "name": "Tawa Roti",
+          "price": "15"
+        },
+        {
+          "name": "Butter Roti",
+          "price": "20"
+        },
+        {
+          "name": "Plain Rice",
+          "price": "59"
+        },
+        {
+          "name": "Jeera Rice",
+          "price": "69"
+        },
+        {
+          "name": "Ghee Rice",
+          "price": "79"
+        },
+        {
+          "name": "Basmati Rice",
+          "price": "79"
+        },
+        {
+          "name": "Dum Aloo",
+          "price": "99"
+        },
+        {
+          "name": "Mixed Vegetables",
+          "price": "149"
+        },
+        {
+          "name": "Matar Paneer",
+          "price": "279"
+        },
+        {
+          "name": "Paneer Masala",
+          "price": "180"
+        },
+        {
+          "name": "Paneer Butter Masala",
+          "price": "209"
+        },
+        {
+          "name": "Shahi Paneer",
+          "price": "249"
+        },
+        {
+          "name": "Kadhai Paneer",
+          "price": "249"
+        },
+        {
+          "name": "Mushroom Matar",
+          "price": "279"
+        },
+        {
+          "name": "Mushroom Butter Masala",
+          "price": "259"
+        },
+        {
+          "name": "Butter Chicken Masala",
+          "price": "250"
+        },
+        {
+          "name": "Dal Fry",
+          "price": "60"
+        },
+        {
+          "name": "Dal Tadka",
+          "price": "80"
+        },
+        {
+          "name": "Butter Dal",
+          "price": "90"
+        },
+        {
+          "name": "Special Mixed Veg",
+          "price": "180"
+        }
       ]
     },
     {
@@ -91,11 +244,26 @@
       "name": "Non Veg",
       "page": 2,
       "items": [
-        { "name": "Kadhai Chicken",   "price": "220" },
-        { "name": "Chicken Do Pyaza", "price": "229" },
-        { "name": "Chicken Masala",   "price": "190" },
-        { "name": "Chicken Curry",    "price": "160" },
-        { "name": "Egg Curry",        "price": "80"  }
+        {
+          "name": "Kadhai Chicken",
+          "price": "220"
+        },
+        {
+          "name": "Chicken Do Pyaza",
+          "price": "229"
+        },
+        {
+          "name": "Chicken Masala",
+          "price": "190"
+        },
+        {
+          "name": "Chicken Curry",
+          "price": "160"
+        },
+        {
+          "name": "Egg Curry",
+          "price": "80"
+        }
       ]
     },
     {
@@ -103,16 +271,46 @@
       "name": "El Classico Specials",
       "page": 2,
       "items": [
-        { "name": "Fish Finger",         "price": "350" },
-        { "name": "Chicken Finger",      "price": "300" },
-        { "name": "Chicken Cheese Roll", "price": "119" },
-        { "name": "Chicken Noorani",     "price": "350" },
-        { "name": "Chicken Pakoda",      "price": "149" },
-        { "name": "French Fries",        "price": "69"  },
-        { "name": "Chicken Roll",        "price": "70"  },
-        { "name": "Veg Roll",            "price": "49"  },
-        { "name": "Egg Roll",            "price": "60"  },
-        { "name": "Paneer Roll",         "price": "70"  }
+        {
+          "name": "Fish Finger",
+          "price": "350"
+        },
+        {
+          "name": "Chicken Finger",
+          "price": "300"
+        },
+        {
+          "name": "Chicken Cheese Roll",
+          "price": "119"
+        },
+        {
+          "name": "Chicken Noorani",
+          "price": "350"
+        },
+        {
+          "name": "Chicken Pakoda",
+          "price": "149"
+        },
+        {
+          "name": "French Fries",
+          "price": "69"
+        },
+        {
+          "name": "Chicken Roll",
+          "price": "70"
+        },
+        {
+          "name": "Veg Roll",
+          "price": "49"
+        },
+        {
+          "name": "Egg Roll",
+          "price": "60"
+        },
+        {
+          "name": "Paneer Roll",
+          "price": "70"
+        }
       ]
     }
   ]
