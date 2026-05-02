@@ -1,28 +1,21 @@
-// elclassico — CLI tool to manage the El Classico restaurant menu.
+// elclassico — generates index.html from menu.csv
 //
-// Data is stored in menu.json (same directory as the binary by default,
-// override with --data flag).
+// CSV columns: Section, Menu item, Price, Sort order
 //
 // Usage:
-//   elclassico list
-//   elclassico list <section-id>
-//   elclassico item add    <section-id> "<name>" <price>
-//   elclassico item edit   <section-id> <item-index> [--name "<new>"] [--price <new>]
-//   elclassico item delete <section-id> <item-index>
-//   elclassico section add    <id> "<name>" [--page <n>]
-//   elclassico section rename <section-id> "<new-name>"
-//   elclassico section delete <section-id>
-//   elclassico generate [--out index.html]
+//   elclassico [--csv menu.csv] [--out index.html]
 
 package main
 
 import (
-	"encoding/json"
-	"errors"
+	"encoding/csv"
 	"fmt"
 	"html/template"
+	"io"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -30,285 +23,177 @@ import (
 // ─── data model ──────────────────────────────────────────────────────────────
 
 type Item struct {
-	Name  string `json:"name"`
-	Price string `json:"price"`
+	Name  string
+	Price string
 }
 
 type Section struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Page  int    `json:"page"`
-	Items []Item `json:"items"`
+	ID    string
+	Name  string
+	Items []Item
 }
 
-type Menu struct {
-	Sections []Section `json:"sections"`
-}
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-func dataPath(override string) string {
-	if override != "" {
-		return override
-	}
-	exe, err := os.Executable()
-	if err != nil {
-		return "menu.json"
-	}
-	return filepath.Join(filepath.Dir(exe), "menu.json")
-}
-
-func load(path string) (*Menu, error) {
-	f, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read %s: %w", path, err)
-	}
-	var m Menu
-	if err := json.Unmarshal(f, &m); err != nil {
-		return nil, fmt.Errorf("invalid JSON in %s: %w", path, err)
-	}
-	return &m, nil
-}
-
-func save(path string, m *Menu) error {
-	b, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, b, 0644)
-}
-
-func findSection(m *Menu, id string) (int, error) {
-	for i, s := range m.Sections {
-		if strings.EqualFold(s.ID, id) {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("section %q not found", id)
-}
-
-func parseIndex(s string, max int) (int, error) {
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, errors.New("item index must be a number")
-	}
-	if n < 1 || n > max {
-		return 0, fmt.Errorf("index %d out of range (1–%d)", n, max)
-	}
-	return n - 1, nil // convert to 0-based
-}
+// ─── CSV loading ─────────────────────────────────────────────────────────────
 
 func slugify(s string) string {
-	s = strings.ToLower(s)
+	s = strings.ToLower(strings.TrimSpace(s))
 	var b strings.Builder
 	for _, r := range s {
-		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
 			b.WriteRune(r)
-		} else if r == ' ' || r == '-' {
+		case r == ' ', r == '-':
 			b.WriteRune('-')
 		}
 	}
 	return strings.Trim(b.String(), "-")
 }
 
-// ─── display ─────────────────────────────────────────────────────────────────
-
-const (
-	bold  = "\033[1m"
-	cyan  = "\033[36m"
-	green = "\033[32m"
-	reset = "\033[0m"
-	dim   = "\033[2m"
-)
-
-func printSection(idx int, s Section) {
-	fmt.Printf("\n%s[%s]%s %s%s%s %s(page %d)%s\n",
-		cyan, s.ID, reset,
-		bold, s.Name, reset,
-		dim, s.Page, reset)
-	fmt.Println(strings.Repeat("─", 48))
-	for i, it := range s.Items {
-		fmt.Printf("  %s%2d.%s  %-36s %s₹ %s%s\n",
-			dim, i+1, reset, it.Name, green, it.Price, reset)
+func loadCSV(path string) ([]Section, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open %s: %w", path, err)
 	}
-}
+	defer f.Close()
 
-// ─── commands ────────────────────────────────────────────────────────────────
+	r := csv.NewReader(f)
+	r.TrimLeadingSpace = true
 
-func cmdList(m *Menu, args []string) {
-	if len(args) == 0 {
-		fmt.Printf("\n%sEl Classico — Menu%s\n", bold, reset)
-		fmt.Println(strings.Repeat("═", 50))
-		for _, s := range m.Sections {
-			printSection(0, s)
+	header, err := r.Read()
+	if err != nil {
+		return nil, fmt.Errorf("cannot read CSV header: %w", err)
+	}
+
+	// Find column indices (case-insensitive)
+	colIdx := map[string]int{
+		"section":    -1,
+		"menu item":  -1,
+		"price":      -1,
+		"sort order": -1,
+	}
+	for i, h := range header {
+		key := strings.ToLower(strings.TrimSpace(h))
+		if _, ok := colIdx[key]; ok {
+			colIdx[key] = i
 		}
-		return
 	}
-	idx, err := findSection(m, args[0])
-	if err != nil {
-		fatal(err)
+	for k, v := range colIdx {
+		if v == -1 {
+			return nil, fmt.Errorf("required column %q not found in CSV header", k)
+		}
 	}
-	printSection(idx, m.Sections[idx])
-}
 
-func cmdItemAdd(m *Menu, args []string) error {
-	// item add <section-id> "<name>" <price>
-	if len(args) < 3 {
-		return errors.New("usage: item add <section-id> \"<name>\" <price>")
-	}
-	si, err := findSection(m, args[0])
-	if err != nil {
-		return err
-	}
-	name := args[1]
-	price := args[2]
-	m.Sections[si].Items = append(m.Sections[si].Items, Item{Name: name, Price: price})
-	fmt.Printf("%sAdded%s %q to [%s] at ₹%s\n", green, reset, name, m.Sections[si].ID, price)
-	return nil
-}
+	ci := colIdx["section"]
+	mi := colIdx["menu item"]
+	pi := colIdx["price"]
+	si := colIdx["sort order"]
 
-func cmdItemEdit(m *Menu, args []string, flags map[string]string) error {
-	// item edit <section-id> <index> [--name "..."] [--price ...]
-	if len(args) < 2 {
-		return errors.New("usage: item edit <section-id> <index> [--name <new>] [--price <new>]")
+	type rawItem struct {
+		name      string
+		price     string
+		sortOrder float64 // NaN = no order given
+		rowNum    int
 	}
-	si, err := findSection(m, args[0])
-	if err != nil {
-		return err
-	}
-	ii, err := parseIndex(args[1], len(m.Sections[si].Items))
-	if err != nil {
-		return err
-	}
-	item := &m.Sections[si].Items[ii]
-	if n, ok := flags["name"]; ok && n != "" {
-		item.Name = n
-	}
-	if p, ok := flags["price"]; ok && p != "" {
-		item.Price = p
-	}
-	fmt.Printf("%sUpdated%s item %d in [%s]: %q @ ₹%s\n",
-		green, reset, ii+1, m.Sections[si].ID, item.Name, item.Price)
-	return nil
-}
 
-func cmdItemDelete(m *Menu, args []string) error {
-	// item delete <section-id> <index>
-	if len(args) < 2 {
-		return errors.New("usage: item delete <section-id> <index>")
-	}
-	si, err := findSection(m, args[0])
-	if err != nil {
-		return err
-	}
-	ii, err := parseIndex(args[1], len(m.Sections[si].Items))
-	if err != nil {
-		return err
-	}
-	removed := m.Sections[si].Items[ii]
-	m.Sections[si].Items = append(m.Sections[si].Items[:ii], m.Sections[si].Items[ii+1:]...)
-	fmt.Printf("%sDeleted%s %q from [%s]\n", green, reset, removed.Name, m.Sections[si].ID)
-	return nil
-}
+	sectionOrder := []string{}             // IDs in first-appearance order
+	sectionNames := map[string]string{}    // id -> display name
+	sectionItems := map[string][]rawItem{} // id -> rows
 
-func cmdSectionAdd(m *Menu, args []string, flags map[string]string) error {
-	// section add <id> "<name>" [--page n]
-	if len(args) < 2 {
-		return errors.New("usage: section add <id> \"<name>\" [--page <n>]")
-	}
-	id := slugify(args[0])
-	name := args[1]
-	page := 1
-	if p, ok := flags["page"]; ok {
-		n, err := strconv.Atoi(p)
+	rowNum := 0
+	for {
+		row, err := r.Read()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			return errors.New("--page must be a number")
+			return nil, fmt.Errorf("CSV read error: %w", err)
 		}
-		page = n
-	}
-	// check duplicate
-	if _, err := findSection(m, id); err == nil {
-		return fmt.Errorf("section %q already exists", id)
-	}
-	m.Sections = append(m.Sections, Section{ID: id, Name: name, Page: page})
-	fmt.Printf("%sAdded section%s [%s] %q on page %d\n", green, reset, id, name, page)
-	return nil
-}
+		rowNum++
 
-func cmdSectionRename(m *Menu, args []string) error {
-	// section rename <id> "<new-name>"
-	if len(args) < 2 {
-		return errors.New("usage: section rename <section-id> \"<new-name>\"")
-	}
-	si, err := findSection(m, args[0])
-	if err != nil {
-		return err
-	}
-	old := m.Sections[si].Name
-	m.Sections[si].Name = args[1]
-	fmt.Printf("%sRenamed%s section [%s] from %q to %q\n", green, reset, m.Sections[si].ID, old, args[1])
-	return nil
-}
-
-func cmdSectionDelete(m *Menu, args []string) error {
-	// section delete <id>
-	if len(args) < 1 {
-		return errors.New("usage: section delete <section-id>")
-	}
-	si, err := findSection(m, args[0])
-	if err != nil {
-		return err
-	}
-	name := m.Sections[si].Name
-	m.Sections = append(m.Sections[:si], m.Sections[si+1:]...)
-	fmt.Printf("%sDeleted%s section %q\n", green, reset, name)
-	return nil
-}
-
-// ─── flag parsing ─────────────────────────────────────────────────────────────
-
-// parseFlags splits args into positional args and --key value flags.
-func parseFlags(args []string) ([]string, map[string]string) {
-	positional := []string{}
-	flags := map[string]string{}
-	for i := 0; i < len(args); i++ {
-		if strings.HasPrefix(args[i], "--") {
-			key := strings.TrimPrefix(args[i], "--")
-			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-				flags[key] = args[i+1]
-				i++
-			} else {
-				flags[key] = "true"
+		get := func(idx int) string {
+			if idx < len(row) {
+				return strings.TrimSpace(row[idx])
 			}
-		} else {
-			positional = append(positional, args[i])
+			return ""
 		}
+
+		sectionName := get(ci)
+		itemName := get(mi)
+
+		// Skip fully empty rows
+		if sectionName == "" && itemName == "" {
+			continue
+		}
+		if sectionName == "" {
+			continue
+		}
+
+		id := slugify(sectionName)
+		if _, seen := sectionItems[id]; !seen {
+			sectionOrder = append(sectionOrder, id)
+			sectionNames[id] = sectionName // first occurrence sets display name
+			sectionItems[id] = nil
+		}
+
+		if itemName == "" {
+			continue // section row with no item (e.g. placeholder rows)
+		}
+
+		sortVal := math.NaN()
+		if sv := get(si); sv != "" {
+			if n, err := strconv.ParseFloat(sv, 64); err == nil {
+				sortVal = n
+			}
+		}
+
+		sectionItems[id] = append(sectionItems[id], rawItem{
+			name:      itemName,
+			price:     get(pi),
+			sortOrder: sortVal,
+			rowNum:    rowNum,
+		})
 	}
-	return positional, flags
+
+	// Build sections, applying sort order
+	sections := make([]Section, 0, len(sectionOrder))
+	for _, id := range sectionOrder {
+		raw := sectionItems[id]
+
+		// Split into explicitly ordered vs naturally ordered
+		var explicit, natural []rawItem
+		for _, it := range raw {
+			if math.IsNaN(it.sortOrder) {
+				natural = append(natural, it)
+			} else {
+				explicit = append(explicit, it)
+			}
+		}
+
+		// Sort the explicit group by their sort order value
+		sort.SliceStable(explicit, func(i, j int) bool {
+			return explicit[i].sortOrder < explicit[j].sortOrder
+		})
+		// Natural group already preserves CSV row order
+
+		// Explicit items first, then naturally-ordered items
+		all := append(explicit, natural...)
+
+		items := make([]Item, len(all))
+		for i, it := range all {
+			items[i] = Item{Name: it.name, Price: it.price}
+		}
+
+		sections = append(sections, Section{
+			ID:    id,
+			Name:  sectionNames[id],
+			Items: items,
+		})
+	}
+
+	return sections, nil
 }
 
-// ─── generate ────────────────────────────────────────────────────────────────
-
-// htmlEscape makes content safe to embed in HTML text nodes.
-// html/template handles this automatically, but we keep the import tidy.
-var _ = template.HTMLEscapeString // ensure import is used
-
-// groupByPage splits sections into a map keyed by page number, preserving order.
-func groupByPage(m *Menu) [][]Section {
-	pageMap := map[int][]Section{}
-	pageOrder := []int{}
-	for _, s := range m.Sections {
-		if _, seen := pageMap[s.Page]; !seen {
-			pageOrder = append(pageOrder, s.Page)
-		}
-		pageMap[s.Page] = append(pageMap[s.Page], s)
-	}
-	result := make([][]Section, len(pageOrder))
-	for i, p := range pageOrder {
-		result[i] = pageMap[p]
-	}
-	return result
-}
+// ─── HTML template ───────────────────────────────────────────────────────────
 
 const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
@@ -384,15 +269,12 @@ const htmlTemplate = `<!DOCTYPE html>
     .item { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .28rem; font-size: .97rem; color: var(--ink-mid); line-height: 1.35; }
     .item-name { flex: 1; }
     .item-price { font-family: 'Cinzel', serif; font-size: .85rem; color: var(--ink); white-space: nowrap; font-weight: 600; }
-    .callout { border: 2px solid var(--rule); border-radius: 2px; padding: .8rem 1.2rem; margin-top: 1rem; text-align: center; }
-    .callout p { font-style: italic; font-size: .95rem; color: var(--ink-mid); line-height: 1.6; }
-    .callout a { color: var(--ink); }
     .note { font-style: italic; font-size: .88rem; color: var(--ink-mid); margin-top: .8rem; text-align: center; }
     .generated { text-align: center; font-size: .78rem; color: #fff8; margin-top: 1rem; font-family: monospace; }
   </style>
 </head>
 <body>
-{{range .Pages}}
+
 <div class="page">
   <div class="corner-bl"></div>
   <div class="corner-br"></div>
@@ -410,216 +292,124 @@ const htmlTemplate = `<!DOCTYPE html>
       {{range .Items}}
       <div class="item">
         <span class="item-name">{{.Name}}</span>
-        <span class="item-price">{{.Price}}</span>
+        {{if .Price}}<span class="item-price">{{.Price}}</span>{{end}}
       </div>
       {{end}}
     </div>
     {{end}}
   </div>
-  {{if .IsLast}}
   <p class="note">Note: we have some items in addition to this menu. Please ask the chef!</p>
-  {{end}}
 </div>
-{{end}}
-<p class="generated">Generated by elclassico CLI · {{.Generated}}</p>
+
+<p class="generated">Generated from {{.CSVFile}}</p>
 </body>
 </html>`
 
-type pageData struct {
-	Sections []Section
-	IsLast   bool
-}
-
 type templateData struct {
-	Pages     []pageData
-	Generated string
-}
-
-func cmdGenerate(m *Menu, flags map[string]string) error {
-	outPath := "index.html"
-	if p, ok := flags["out"]; ok && p != "" {
-		outPath = p
-	}
-
-	pages := groupByPage(m)
-	pd := make([]pageData, len(pages))
-	for i, secs := range pages {
-		pd[i] = pageData{Sections: secs, IsLast: i == len(pages)-1}
-	}
-
-	t, err := template.New("menu").Parse(htmlTemplate)
-	if err != nil {
-		return fmt.Errorf("template parse error: %w", err)
-	}
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return fmt.Errorf("cannot create %s: %w", outPath, err)
-	}
-	defer f.Close()
-
-	data := templateData{
-		Pages:     pd,
-		Generated: "menu.json",
-	}
-	if err := t.Execute(f, data); err != nil {
-		return fmt.Errorf("template execute error: %w", err)
-	}
-
-	fmt.Printf("%sGenerated%s %s  (%d sections across %d page(s))\n",
-		green, reset, outPath, len(m.Sections), len(pages))
-	return nil
-}
-
-// ─── help ────────────────────────────────────────────────────────────────────
-
-func printHelp() {
-	fmt.Print(`
-El Classico Menu CLI
-
-USAGE
-  elclassico [--data <path>] <command> [args] [flags]
-
-COMMANDS
-  list [<section-id>]
-      List all sections (or a single section) with items.
-
-  item add <section-id> "<name>" <price>
-      Add a new item to a section.
-
-  item edit <section-id> <index> [--name "<new>"] [--price <new>]
-      Edit an existing item (1-based index).
-
-  item delete <section-id> <index>
-      Remove an item (1-based index).
-
-  section add <id> "<name>" [--page <n>]
-      Add a new section (id auto-slugified).
-
-  section rename <section-id> "<new-name>"
-      Rename a section.
-
-  section delete <section-id>
-      Delete a section and all its items.
-
-  generate [--out <path>]
-      Regenerate index.html from menu.json. Default output: index.html
-
-GLOBAL FLAGS
-  --data <path>   Path to menu.json  (default: menu.json next to binary)
-
-EXAMPLES
-  elclassico list
-  elclassico list biryani
-  elclassico item add biryani "Prawn Biryani" 349
-  elclassico item edit chinese 3 --name "Veg Manchurian" --price 149
-  elclassico item delete beverages 2
-  elclassico section add desserts "Desserts" --page 2
-  elclassico section rename desserts "Sweet Corner"
-  elclassico section delete desserts
-  elclassico generate
-  elclassico generate --out public/index.html
-`)
+	Sections []Section
+	CSVFile  string
 }
 
 // ─── main ────────────────────────────────────────────────────────────────────
 
-func fatal(err error) {
-	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+func fatal(msg string) {
+	fmt.Fprintln(os.Stderr, "error:", msg)
 	os.Exit(1)
+}
+
+func defaultPath(override, filename string) string {
+	if override != "" {
+		return override
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return filename
+	}
+	return filepath.Join(filepath.Dir(exe), filename)
 }
 
 func main() {
 	args := os.Args[1:]
-	if len(args) == 0 {
-		printHelp()
-		os.Exit(0)
-	}
 
-	// extract global --data flag first
-	dataOverride := ""
-	filtered := []string{}
+	csvPath := ""
+	outPath := ""
+
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--data" && i+1 < len(args) {
-			dataOverride = args[i+1]
+		switch args[i] {
+		case "--csv":
+			if i+1 >= len(args) {
+				fatal("--csv requires a value")
+			}
+			csvPath = args[i+1]
 			i++
-		} else {
-			filtered = append(filtered, args[i])
+		case "--out":
+			if i+1 >= len(args) {
+				fatal("--out requires a value")
+			}
+			outPath = args[i+1]
+			i++
+		case "-h", "--help", "help":
+			fmt.Print(`El Classico — menu HTML generator
+
+USAGE
+  elclassico [--csv menu.csv] [--out index.html]
+
+FLAGS
+  --csv <path>   Input CSV file   (default: menu.csv next to binary)
+  --out <path>   Output HTML file (default: index.html next to binary)
+
+CSV FORMAT
+  Required columns (header row, any order):
+    Section    — section display name  e.g. "Biryani"
+    Menu item  — item name             e.g. "Chicken Dum Biryani"
+    Price      — price string          e.g. "129/229" or "149"
+    Sort order — optional number; items without a sort order appear
+                 after sorted items, in their original CSV row order
+
+EXAMPLES
+  elclassico
+  elclassico --csv data/menu.csv
+  elclassico --csv menu.csv --out public/index.html
+`)
+			os.Exit(0)
+		default:
+			fatal(fmt.Sprintf("unknown argument %q — run 'elclassico --help'", args[i]))
 		}
 	}
-	args = filtered
 
-	if args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		printHelp()
-		os.Exit(0)
-	}
+	csvPath = defaultPath(csvPath, "menu.csv")
+	outPath = defaultPath(outPath, "index.html")
 
-	path := dataPath(dataOverride)
-	m, err := load(path)
+	sections, err := loadCSV(csvPath)
 	if err != nil {
-		fatal(err)
+		fatal(err.Error())
+	}
+	if len(sections) == 0 {
+		fatal("no sections found in " + csvPath)
 	}
 
-	cmd := args[0]
-	rest := args[1:]
-	positional, flags := parseFlags(rest)
-
-	var cmdErr error
-
-	switch cmd {
-	case "list":
-		cmdList(m, positional)
-		return // no save needed
-
-	case "generate":
-		if err := cmdGenerate(m, flags); err != nil {
-			fatal(err)
-		}
-		return // no save needed — generate is read-only
-
-	case "item":
-		if len(positional) == 0 {
-			fatal(errors.New("usage: item <add|edit|delete> ..."))
-		}
-		sub := positional[0]
-		subArgs := positional[1:]
-		switch sub {
-		case "add":
-			cmdErr = cmdItemAdd(m, subArgs)
-		case "edit":
-			cmdErr = cmdItemEdit(m, subArgs, flags)
-		case "delete":
-			cmdErr = cmdItemDelete(m, subArgs)
-		default:
-			fatal(fmt.Errorf("unknown item subcommand %q", sub))
-		}
-
-	case "section":
-		if len(positional) == 0 {
-			fatal(errors.New("usage: section <add|rename|delete> ..."))
-		}
-		sub := positional[0]
-		subArgs := positional[1:]
-		switch sub {
-		case "add":
-			cmdErr = cmdSectionAdd(m, subArgs, flags)
-		case "rename":
-			cmdErr = cmdSectionRename(m, subArgs)
-		case "delete":
-			cmdErr = cmdSectionDelete(m, subArgs)
-		default:
-			fatal(fmt.Errorf("unknown section subcommand %q", sub))
-		}
-
-	default:
-		fatal(fmt.Errorf("unknown command %q — run 'elclassico help'", cmd))
+	t, err := template.New("menu").Parse(htmlTemplate)
+	if err != nil {
+		fatal("template parse error: " + err.Error())
 	}
 
-	if cmdErr != nil {
-		fatal(cmdErr)
+	out, err := os.Create(outPath)
+	if err != nil {
+		fatal("cannot create " + outPath + ": " + err.Error())
+	}
+	defer out.Close()
+
+	if err := t.Execute(out, templateData{Sections: sections, CSVFile: filepath.Base(csvPath)}); err != nil {
+		fatal("template error: " + err.Error())
 	}
 
-	if err := save(path, m); err != nil {
-		fatal(fmt.Errorf("could not save menu: %w", err))
+	totalItems := 0
+	for _, s := range sections {
+		totalItems += len(s.Items)
 	}
+
+	const green = "\033[32m"
+	const reset = "\033[0m"
+	fmt.Printf("%sGenerated%s %s  (%d sections, %d items)\n",
+		green, reset, outPath, len(sections), totalItems)
 }

@@ -1,0 +1,67 @@
+Section,Menu item,Price,Sort order
+Biryani,Chicken Dum Biryani,129/229,1
+Biryani,Mutton Dum Biryani,170/300,2
+Biryani,Egg Biryani,110/200,3
+Biryani,Paneer Biryani,129/229,4
+Biryani,Special Chicken Biryani,159/299,5
+Biryani,Chicken Hyderabadi Biryani,319,6
+Fried Rice,Chicken Fried Rice,159,1
+Fried Rice,Egg Fried Rice,129,2
+Fried Rice,Veg Fried Rice,119,3
+Fried Rice,Paneer Fried Rice,159,4
+Fried Rice,Mixed Fried Rice,229,5
+Chinese,Veg Noodles,119,1
+Chinese,Chicken Noodles,159,2
+Chinese,Chicken Hakka Noodles,139,3
+Chinese,Egg Noodles,129,4
+Chinese,Mixed Noodles,169,5
+Chinese,Chilli Chicken,160,6
+Chinese,Chicken Dry Fry,169,7
+Chinese,Chicken Lollipop,140,8
+Chinese,Chilli Baby Corn Dry,219,9
+Chinese,Crispy Baby Corn,209,10
+Chinese,Chicken Manchurian,150,11
+Chinese,Chicken 65,169,12
+Beverages,Tea (Red),10,1
+Beverages,Tea (Milk),20,2
+Beverages,Coffee,30,3
+Beverages,Soft Drink,30,4
+Beverages,Banana Shake,60,5
+Beverages,Lemon Juice,50,6
+Beverages,Fruit Shake (Seasonal),99,7
+Indian,Paratha Sabji & Chutney,40,1
+Indian,Tawa Roti,15,2
+Indian,Butter Roti,20,3
+Indian,Plain Rice,59,4
+Indian,Jeera Rice,69,5
+Indian,Ghee Rice,79,6
+Indian,Basmati Rice,79,7
+Indian,Dum Aloo,99,8
+Indian,Mixed Vegetables,149,9
+Indian,Matar Paneer,279,10
+Indian,Paneer Masala,180,11
+Indian,Paneer Butter Masala,209,12
+Indian,Shahi Paneer,249,13
+Indian,Kadhai Paneer,249,14
+Indian,Mushroom Matar,279,15
+Indian,Mushroom Butter Masala,259,16
+Indian,Butter Chicken Masala,250,17
+Indian,Dal Fry,60,18
+Indian,Dal Tadka,80,19
+Indian,Butter Dal,90,20
+Indian,Special Mixed Veg,180,21
+Non Veg,Kadhai Chicken,220,1
+Non Veg,Chicken Do Pyaza,229,2
+Non Veg,Chicken Masala,190,3
+Non Veg,Chicken Curry,160,4
+Non Veg,Egg Curry,80,5
+El Classico Specials,Fish Finger,350,1
+El Classico Specials,Chicken Finger,300,2
+El Classico Specials,Chicken Cheese Roll,119,3
+El Classico Specials,Chicken Noorani,350,4
+El Classico Specials,Chicken Pakoda,149,5
+El Classico Specials,French Fries,69,6
+El Classico Specials,Chicken Roll,70,7
+El Classico Specials,Veg Roll,49,8
+El Classico Specials,Egg Roll,60,9
+El Classico Specials,Paneer Roll,70,10
