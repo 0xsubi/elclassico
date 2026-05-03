@@ -1,0 +1,50 @@
+name: Sync menu from Google Sheets
+
+on:
+  # Run on a schedule — every day at 6 AM IST (00:30 UTC)
+  schedule:
+    - cron: '30 0 * * *'
+
+  # Also allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit back to the repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download CSV from Google Sheets
+        env:
+          SHEETS_CSV_URL: ${{ secrets.SHEETS_CSV_URL }}
+        run: |
+          curl -fsSL "$SHEETS_CSV_URL" -o menu.csv
+          echo "Downloaded menu.csv:"
+          wc -l menu.csv
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Generate index.html
+        run: go run main.go --csv menu.csv --out index.html
+
+      - name: Commit updated files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add menu.csv index.html
+
+          # Only commit if something actually changed
+          if git diff --cached --quiet; then
+            echo "No changes — menu is already up to date."
+          else
+            git commit -m "chore: sync menu from Google Sheets [skip ci]"
+            git push
+          fi

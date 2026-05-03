@@ -64,7 +64,6 @@ func loadCSV(path string) ([]Section, error) {
 		return nil, fmt.Errorf("cannot read CSV header: %w", err)
 	}
 
-	// Find column indices (case-insensitive)
 	colIdx := map[string]int{
 		"section":    -1,
 		"menu item":  -1,
@@ -93,14 +92,13 @@ func loadCSV(path string) ([]Section, error) {
 	type rawItem struct {
 		name      string
 		price     string
-		sortOrder float64 // NaN = no order given
-		available bool
+		sortOrder float64
 		rowNum    int
 	}
 
-	sectionOrder := []string{}             // IDs in first-appearance order
-	sectionNames := map[string]string{}    // id -> display name
-	sectionItems := map[string][]rawItem{} // id -> rows
+	sectionOrder := []string{}
+	sectionNames := map[string]string{}
+	sectionItems := map[string][]rawItem{}
 
 	rowNum := 0
 	for {
@@ -123,7 +121,6 @@ func loadCSV(path string) ([]Section, error) {
 		sectionName := get(ci)
 		itemName := get(mi)
 
-		// Skip fully empty rows
 		if sectionName == "" && itemName == "" {
 			continue
 		}
@@ -134,12 +131,17 @@ func loadCSV(path string) ([]Section, error) {
 		id := slugify(sectionName)
 		if _, seen := sectionItems[id]; !seen {
 			sectionOrder = append(sectionOrder, id)
-			sectionNames[id] = sectionName // first occurrence sets display name
+			sectionNames[id] = sectionName
 			sectionItems[id] = nil
 		}
 
 		if itemName == "" {
-			continue // section row with no item (e.g. placeholder rows)
+			continue
+		}
+
+		// Available: only "t" or "T" renders the item
+		if strings.ToLower(get(ai)) != "t" {
+			continue
 		}
 
 		sortVal := math.NaN()
@@ -149,27 +151,18 @@ func loadCSV(path string) ([]Section, error) {
 			}
 		}
 
-		// Available: "t" or "T" means available; empty or "f"/"F" means not available
-		avail := strings.ToLower(get(ai)) == "t"
-		if !avail {
-			continue
-		}
-
 		sectionItems[id] = append(sectionItems[id], rawItem{
 			name:      itemName,
 			price:     get(pi),
 			sortOrder: sortVal,
-			available: true,
 			rowNum:    rowNum,
 		})
 	}
 
-	// Build sections, applying sort order
 	sections := make([]Section, 0, len(sectionOrder))
 	for _, id := range sectionOrder {
 		raw := sectionItems[id]
 
-		// Split into explicitly ordered vs naturally ordered
 		var explicit, natural []rawItem
 		for _, it := range raw {
 			if math.IsNaN(it.sortOrder) {
@@ -178,16 +171,11 @@ func loadCSV(path string) ([]Section, error) {
 				explicit = append(explicit, it)
 			}
 		}
-
-		// Sort the explicit group by their sort order value
 		sort.SliceStable(explicit, func(i, j int) bool {
 			return explicit[i].sortOrder < explicit[j].sortOrder
 		})
-		// Natural group already preserves CSV row order
 
-		// Explicit items first, then naturally-ordered items
 		all := append(explicit, natural...)
-
 		items := make([]Item, len(all))
 		for i, it := range all {
 			items[i] = Item{Name: it.name, Price: it.price}
@@ -203,7 +191,7 @@ func loadCSV(path string) ([]Section, error) {
 	return sections, nil
 }
 
-// ─── HTML template ───────────────────────────────────────────────────────────
+// ─── HTML template ────────────────────────────────────────────────────────────
 
 const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
@@ -280,7 +268,6 @@ const htmlTemplate = `<!DOCTYPE html>
     .item-name { flex: 1; }
     .item-price { font-family: 'Cinzel', serif; font-size: .85rem; color: var(--ink); white-space: nowrap; font-weight: 600; }
     .note { font-style: italic; font-size: .88rem; color: var(--ink-mid); margin-top: .8rem; text-align: center; }
-    .generated { text-align: center; font-size: .78rem; color: #fff8; margin-top: 1rem; font-family: monospace; }
   </style>
 </head>
 <body>
@@ -311,13 +298,11 @@ const htmlTemplate = `<!DOCTYPE html>
   <p class="note">Note: we have some items in addition to this menu. Please ask the chef!</p>
 </div>
 
-<p class="generated">Generated from {{.CSVFile}}</p>
 </body>
 </html>`
 
 type templateData struct {
 	Sections []Section
-	CSVFile  string
 }
 
 // ─── main ────────────────────────────────────────────────────────────────────
@@ -368,19 +353,13 @@ FLAGS
   --csv <path>   Input CSV file   (default: menu.csv next to binary)
   --out <path>   Output HTML file (default: index.html next to binary)
 
-CSV FORMAT
-  Required columns (header row, any order):
-    Section    — section display name  e.g. "Biryani"
-    Menu item  — item name             e.g. "Chicken Dum Biryani"
-    Price      — price string          e.g. "129/229" or "149"
-    Sort order — optional number; items without a sort order appear
-                 after sorted items, in their original CSV row order
-    Available  — T/t = show on menu; F/f or empty = hide from menu
+CSV COLUMNS
+  Section | Menu item | Price | Sort order | Available
+  Available: T/t = show on menu; F/f or empty = hide
 
 EXAMPLES
   elclassico
-  elclassico --csv data/menu.csv
-  elclassico --csv menu.csv --out public/index.html
+  elclassico --csv menu.csv --out index.html
 `)
 			os.Exit(0)
 		default:
@@ -410,7 +389,7 @@ EXAMPLES
 	}
 	defer out.Close()
 
-	if err := t.Execute(out, templateData{Sections: sections, CSVFile: filepath.Base(csvPath)}); err != nil {
+	if err := t.Execute(out, templateData{Sections: sections}); err != nil {
 		fatal("template error: " + err.Error())
 	}
 
