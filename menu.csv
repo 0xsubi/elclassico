@@ -1,6 +1,6 @@
 Section,Menu item,Price,Sort order,Available
-Biryani,Chicken Dum Biryani,129/229,1,T
-Biryani,Mutton Dum Biryani,170/300,2,T
+Biryani,Chicken Dum Biryani,130/229,1,T
+Biryani,Mutton Dum Biryani,170/300,2,F
 Biryani,Egg Biryani,110/200,3,T
 Biryani,Paneer Biryani,129/229,4,T
 Biryani,Special Chicken Biryani,159/299,5,T
